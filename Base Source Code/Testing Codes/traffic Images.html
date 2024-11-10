@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Traffic Images Viewer</title>
+<style>
+  .image-container {
+    margin-bottom: 20px;
+  }
+  .image-container img {
+    max-width: 100%;
+    height: auto;
+  }
+</style>
+</head>
+<body>
+
+<h1>Traffic Images Viewer</h1>
+
+<div id="imageGallery"></div>
+
+<script>
+  // Function to fetch and display images
+  function fetchImages() {
+    var apiUrl = 'https://api.data.gov.sg/v1/transport/traffic-images';
+    
+    fetch(apiUrl)
+      .then(response => response.json())
+      .then(data => {
+        // Clear previous images
+        document.getElementById('imageGallery').innerHTML = '';
+        
+        // Loop through the images and display them
+        data.items.forEach(item => {
+          item.cameras.forEach(camera => {
+            var imageContainer = document.createElement('div');
+            imageContainer.classList.add('image-container');
+            
+            var image = document.createElement('img');
+            image.src = camera.image;
+            image.alt = 'Traffic Camera Image';
+            
+            imageContainer.appendChild(image);
+            document.getElementById('imageGallery').appendChild(imageContainer);
+          });
+        });
+      })
+      .catch(error => console.error('Error fetching images:', error));
+  }
+
+  // Fetch images initially
+  fetchImages();
+  
+  // Fetch images every minute (60000 milliseconds)
+  setInterval(fetchImages, 60000);
+</script>
+
+</body>
+</html>

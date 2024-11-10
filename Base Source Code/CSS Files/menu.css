@@ -1,0 +1,154 @@
+#map {
+    float: right;
+    width: 70%; /* Adjust width as needed */
+    height: 100%;
+}
+
+/* Add margin-bottom to the start input field */
+#origin {
+    margin-bottom: 10px; /* Adjust as needed */
+}
+
+/* Add margin-bottom to the destination input field */
+#destination {
+    margin-bottom: 10px; /* Adjust as needed */
+}
+
+/* Add border to the start and destination input fields */
+#origin,
+#destination {
+    border: 1px solid #ccc; /* Border style */
+    border-radius: 5px; /* Optional: Add border radius for rounded corners */
+    padding: 5px; /* Optional: Add padding for better appearance */
+    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+}
+
+.input-Box {
+    margin: 10px 12px; /* Add margin to create space between rounded boxes */
+    background-color: white; /* Add white background color */
+    padding: 10px; /* Add padding for spacing */
+    border-radius: 10px; /* Add border radius for rounded corners */
+}
+
+.input-Box span {
+    float: right;
+    margin-top: -1px; /* Adjust this value to align it with the input fields */
+    font-size: 20px; /* Adjust the font size */
+    padding: 5px; /* Adjust the padding */
+}
+
+#swap-btn {
+    position: relative; /* Add position relative */
+    z-index: 1001; /* Increase z-index to bring it to the front */
+    float: right;
+    margin-top: -80px;
+    margin-right: -10px;
+    font-size: 24px; /* Adjust font size */
+    padding: 10px; /* Adjust padding */
+}
+
+.rounded-box1 {
+    margin-bottom: 20px; /* Add margin to create space between rounded boxes */
+}
+
+.rounded-box input[type="button"] {
+    width: 100%;
+    padding: 10px;
+    font-size: 16px;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    cursor: pointer;
+}
+
+body {
+    font-family: 'Calibri', 'sans-serif';
+    font-size: 16px;
+    font-weight: bold;
+    text-align: center;
+    margin: 0;
+    width: 100vw;
+    height: 100vh;
+}
+
+.transit-info {
+    margin: auto;
+    background-color: #ffffff;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 10px;
+    margin-top: 10px;
+    max-width: 800px;
+}
+
+.step {
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+}
+
+.step h4 {
+    margin-top: 0;
+}
+
+.sidebar {
+    float: left;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    min-width: 30%;
+    background-color: #73d1fb;
+    padding: 20px;
+    box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.1);
+    overflow-y: auto;
+    z-index: 1000;
+    transition: transform 0.3s ease-in-out;
+}
+
+.sidebar img {
+    width: 100%; /* Adjust the width as needed */
+    height: 30%; /* Maintain aspect ratio */
+}
+
+.sidebar h1 {
+    font-size: 30px; /* Adjust the font size as needed */
+    font-family: Arial, sans-serif; /* Adjust the font family as needed */
+    position: absolute; /* Position the element absolutely */
+    top: 20px; /* Adjust the top position as needed */
+    left: 50%; /* Position horizontally in the center */
+    transform: translateX(-50%); /* Adjust to horizontally center the element */
+    z-index: 1; /* Ensure the h1 is above other content */
+}
+
+.sidebar .rounded-box {
+    min-width: 25%;
+}
+
+.recommendation {
+    visibility:hidden;
+}
+
+.recommendation h2{
+    font-size: 30px;
+}
+
+.button {
+    width: 30%;
+    padding: 10px;
+    font-size: 16px;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    cursor: pointer;
+}
+
+.recommendation #result {
+    visibility: hidden;
+}
+
+.button-container {
+    visibility: hidden;
+}

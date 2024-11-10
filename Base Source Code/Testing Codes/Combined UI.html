@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transportation Application</title>
+    <link rel="stylesheet" href="https://pyscript.net/alpha/pyscript.css" />
+    <script defer src="https://pyscript.net/alpha/pyscript.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <style>
+        #map {
+            margin: auto;
+            height: 400px;
+            width: 800px;
+        }
+
+        .rounded-box {
+            margin: auto;
+            background-color:#4a89ff;
+            border-radius: 10px;
+            padding: 20px;
+            width: 800px;
+            height: 150px;
+            box-shadow: 0px 0px 10px #888;
+        }
+
+        body {
+            font-family: 'Calibri', 'sans-serif';
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        form {
+            position: relative;
+            bottom: 0;
+            right: 0;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .transit-info {
+            margin: auto;
+            background-color: #ffffff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            margin-top: 10px;
+            max-width: 800px;
+        }
+
+        .step {
+            border-bottom: 1px solid #ccc;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+        }
+
+        .step h4 {
+            margin-top: 0;
+        }
+
+
+        .topnav {
+            overflow: hidden;
+            background-color: #333;
+        }
+
+        .topnav a {
+            float: center;
+            color: #f2f2f2;
+            text-align: center;
+            padding: 14px 16px;
+            text-decoration: none;
+            font-size: 17px;
+        }
+
+        .topnav a:hover {
+            background-color: #ddd;
+            color: black;
+        }
+
+        .topnav a.active {
+            background-color: #04AA6D;
+            color: white;
+        }
+    </style>
+</head>
+
+<body style="background-color:#FFFFFF">
+        <div class="topnav">
+        <a class="active" href="Draft 1.html">Home</a>
+        <a href="#driving">Carpark information</a>
+        <a href="#taxi">Taxi information</a>
+        <a href="Routetest2.html">Public Transportation</a>
+        <a href="#images">Traffic Images</a>
+    </div>
+    <br>
+    <div id="map"></div>
+    <script>
+        var map, directionsService, directionsRenderer;
+        var originLocation, destinationLocation;
+
+        function initMap() {
+            // Initialize map
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 11,
+                center: {
+                    lat: 1.3802409,lng: 103.7907347
+                }
+            });
+
+            // Initialize Directions Service and Renderer
+            directionsService = new google.maps.DirectionsService();
+            directionsRenderer = new google.maps.DirectionsRenderer();
+        }
+
+        function hideInfo(){
+            drivingInfo.style.display = 'none';
+            transitInfo.style.display = 'none';
+        }
+
+        function clearMarkings() {
+            directionsRenderer.setMap(null);
+            document.getElementById('origin').value = '';
+            document.getElementById('destination').value = '';
+            document.getElementById('drivinginfo').innerHTML ="";
+            document.getElementById('transit-info').innerHTML = "";
+            document.getElementById('routeselection').style.display = 'none';
+        }
+
+        function GPSlocation() {
+            navigator.geolocation.getCurrentPosition(showLocation);
+        }
+
+        function showLocation(position) {
+            document.getElementById('origin').value = position.coords.latitude + "," + position.coords.longitude;
+        }
+
+        function mapmarking() {
+            var origin = document.getElementById('origin').value;
+            var destination = document.getElementById('destination').value;
+
+            getCoordinates(origin, true);
+            getCoordinates(destination, false);
+        }
+
+        function getCoordinates(location, isOrigin) {
+            var geocoder = new google.maps.Geocoder();
+
+            geocoder.geocode({
+                'address': location
+            }, function (results, status) {
+                if (status === 'OK') {
+                    if (isOrigin) {
+                        originLocation = results[0].geometry.location;
+                    } else {
+                        destinationLocation = results[0].geometry.location;
+                        calculateAndDisplayDrivingRoute(); //default display
+                    }
+                } else {
+                    alert("Error: Invalid Entry, Please Key Again");
+                }
+            });
+        }
+
+        function calculateAndDisplayDrivingRoute() {
+            directionsService.route({
+                origin: originLocation,
+                destination: destinationLocation,
+                travelMode: 'DRIVING'
+            }, function (response, status) {
+                if (status === 'OK') {
+                    directionsRenderer.setMap(map);
+                    directionsRenderer.setDirections(response);
+                    
+                    var route = response.routes[0];
+                    var distance = 0;
+                    var duration = 0;
+                    for (var i = 0; i < route.legs.length; i++) {
+                        distance += route.legs[i].distance.value;
+                        duration += route.legs[i].duration.value;
+                    }
+                    // Convert distance to kilometers and time to minutes
+                    distance = distance / 1000;
+                    duration = duration / 60;
+
+                    document.getElementById('drivinginfo').innerHTML = "Distance: " + distance.toFixed(2) + " km, Duration: " + duration.toFixed(0) + " mins";
+                } else {
+                    window.alert('Directions request failed due to ' + status);
+                }
+            });
+        }
+
+        function calculateAndDisplayTransitRoute() {
+            directionsService.route({
+                origin: originLocation,
+                destination: destinationLocation,
+                travelMode: 'TRANSIT', // Set travel mode to transit
+                provideRouteAlternatives: true // Request multiple route alternatives
+            }, function (response, status) {
+                    if (status === 'OK') {
+                    var routeSelect = document.getElementById('routeSelect');
+                    var selectedRouteIndex = routeSelect.options[routeSelect.selectedIndex].value;
+                    
+                    directionsRenderer.setMap(null);
+                    directionsRenderer = new google.maps.DirectionsRenderer({
+                        map: map,
+                        directions: response,
+                        routeIndex: selectedRouteIndex
+                    });
+                    //directionsRenderer.setDirections(response);
+                    var routes = response.routes;
+                    var transitInfo = document.getElementById('transit-info');
+                    transitInfo.innerHTML = '';
+                    for (var i = 0; i < Math.min(routes.length, 3); i++) { 
+                        var route = routes[i];
+                        var distance = 0;
+                        var duration = 0;
+                        for (var j = 0; j < route.legs.length; j++) {
+                            distance += route.legs[j].distance.value;
+                            duration += route.legs[j].duration.value;
+                        }
+                        // Convert distance to kilometers and time to minutes
+                        distance = distance / 1000;
+                        duration = duration / 60;
+
+                        // Create a div for each route
+                        var routeDiv = document.createElement('div');
+                        routeDiv.classList.add('transit-info', 'route');
+
+                        // Populate the div with route information
+                        var header = document.createElement('div');
+                        header.innerHTML = "<h1>Route " + (i + 1) + "</h1><p>Distance: " + distance.toFixed(2) + " km, Duration: " + duration.toFixed(0) + " mins</p>";
+                        header.classList.add('step');
+                        routeDiv.appendChild(header);
+
+                        // Iterate through transit steps
+                        for (var k = 0; k < route.legs[0].steps.length; k++) {
+                            var step = route.legs[0].steps[k];
+                            if (step.travel_mode === 'TRANSIT') {
+                                var transitDetails = step.transit;
+                                var stepDiv = document.createElement('div');
+                                if(k+2 != route.legs[0].steps.length){
+                                    stepDiv.classList.add('step');
+                                }
+                                    
+                                stepDiv.innerHTML = "<p>" + transitDetails.line.name + " (" + transitDetails.line.vehicle.type + ")</p><p>Departure: " + transitDetails.departure_stop.name + "</p><p>Arrival: " + transitDetails.arrival_stop.name + "</p>";
+                                routeDiv.appendChild(stepDiv);
+                            }
+                        }
+
+                        // Append the div to transitInfo
+                        transitInfo.appendChild(routeDiv);
+                    }
+                } else {
+                    window.alert('Directions request failed due to ' + status);
+                }
+            });
+        }
+
+        function printtransportinfo(){
+            var drivingInfo = document.getElementById('drivinginfo');
+            var transitInfo = document.getElementById('transit-info');
+            document.getElementById('routeselection').style.display = 'block';
+            drivingInfo.style.display = 'none';
+            transitInfo.style.display = 'block';
+            calculateAndDisplayTransitRoute();
+        }
+
+        function printdrivinginfo(){
+            var drivingInfo = document.getElementById('drivinginfo');
+            var transitInfo = document.getElementById('transit-info');
+            document.getElementById('routeselection').style.display = 'none';
+            drivingInfo.style.display = 'block';
+            transitInfo.style.display = 'none';
+            calculateAndDisplayDrivingRoute();
+        }
+    </script>
+
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAo6_fYG69jFPnIrR7elUBEgJzV7mN-Y0k&callback=initMap" async defer></script>
+
+    <p>Hello there, where are you heading to?</p>
+    <div class="rounded-box">
+        <form action="/action_page.php">
+            <label for="origin">Origin:&emsp;&emsp;&emsp;&emsp;</label>
+            <input type="text" id="origin" name="origin" style="width: 400px"><br><br>
+
+            <label for="destination">Destination: &ensp;&emsp;</label>
+            <input type="text" id="destination" name="destination" style="width: 400px"><br><br>
+
+            <input type="button" onclick="GPSlocation()" value="Use Current Location" style="width: 150px">
+            <input type="button" onclick="mapmarking()" value="Submit" style="width: 150px">
+            <input type="button" onclick="clearMarkings()" value="Clear Search" style="width: 150px">
+        </form>
+    </div>
+    <p>Your Search results</p>
+    <div class="rounded-box">
+    <input type="button" onclick="printdrivinginfo()" value="Driving Information" style="width: 150px">
+    <input type="button" onclick="printtransportinfo()" value="Transit Information" style="width: 150px">
+    <br><br>
+    <div id = "routeselection" style="display: none;">   
+        <form action="/action_page.php">
+        <label for="i">Choose your preferred route:</label>
+        <select name="i" id="routeSelect">
+            <option value= "0">Route 1</option>
+            <option value= "1">Route 2</option>
+            <option value= "2">Route 3</option>
+        </select>
+        <input type="button" onclick="printtransportinfo()" value="Submit">
+    </form>
+    </div>
+    </div>
+
+    <p id="drivinginfo"></p>
+    <div id="transit-info"></div>
+</body>
+
+</html>

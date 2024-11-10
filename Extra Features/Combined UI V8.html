@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <title>Transportation Application</title>
+
+    <link rel="stylesheet" href="https://pyscript.net/alpha/pyscript.css" />
+    
+    <script defer src="https://pyscript.net/alpha/pyscript.js"></script>
+
+    <!-- Taxi Availability Javascript Files-->
+    <script src="../Base Source Code/JavaScript Files/taxi.js"></script>
+
+    <!-- Carpark Availability Javascript files-->
+    <script src="../Base Source Code/JavaScript Files/carpark.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script> 
+    <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBLsQViCvXeunoy4q3Ju66iYvOhodcnWi4&callback=initMap" async defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <style>
+	
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 30%;
+  background-color: #4CAF50;
+  padding: 20px;
+  box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.1);
+  overflow-y: auto;
+  z-index: 1000;
+  transition: transform 0.3s ease-in-out;
+}	
+	
+	#map {
+    float: right;
+    width: 70%; /* Adjust width as needed */
+    height: 100%;
+	}
+	
+	
+/* Adjusted styles for the button containers */
+.button-container {
+    display: flex;
+    justify-content: space-between;
+    width: 70%; /* Adjust the width of the button container */
+    margin: 0 auto; /* Center the button container */
+}
+
+/* Add margin-bottom to the start input field */
+#origin {
+    margin-bottom: 10px; /* Adjust as needed */
+}
+
+/* Add margin-bottom to the destination input field */
+#destination {
+    margin-bottom: 10px; /* Adjust as needed */
+}
+
+/* Add border to the start and destination input fields */
+#origin,
+#destination {
+    border: 1px solid #ccc; /* Border style */
+    border-radius: 5px; /* Optional: Add border radius for rounded corners */
+    padding: 5px; /* Optional: Add padding for better appearance */
+    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+}
+    .input-Box{
+        margin-bottom: 20px; /* Add margin to create space between rounded boxes */
+        background-color: white; /* Add white background color */
+        padding: 10px; /* Add padding for spacing */
+        border-radius: 10px; /* Add border radius for rounded corners */
+    }
+	
+	
+	.input-Box span {
+    float: right;
+    margin-top: -1px; /* Adjust this value to align it with the input fields */
+    font-size: 20px; /* Adjust the font size */
+    padding: 5px; /* Adjust the padding */
+}
+
+
+
+#swap-btn {
+    position: relative; /* Add position relative */
+    z-index: 1001; /* Increase z-index to bring it to the front */
+    float: right;
+    margin-top: -80px;
+    margin-right: -10px;
+	font-size: 24px; /* Adjust font size */
+    padding: 10px; /* Adjust padding */
+}
+
+
+
+/* Adjusted styles for the rounded boxes */
+.rounded-box {
+    width: calc(25% - 6px); /* Adjust the width to fit three buttons side by side with equal spacing */
+	margin-bottom: 20px;
+    margin-right: 0px; /* Add margin-right for spacing between buttons */
+}
+
+/* Adjust margin-right for the last button to prevent unnecessary spacing */
+.rounded-box:first-child{
+    margin-right: 0;
+}
+
+
+
+.rounded-box input[type="button"] {
+    width: 100%;
+    padding: 40px;
+    font-size: 16px;
+    background-color: #fff;
+    border: 3px solid #ccc;
+    border-radius: 10px;
+    margin-bottom: 0; /* Remove margin bottom to prevent extra space between buttons */
+    cursor: pointer;
+    /* Center text vertically and horizontally */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* Wrap text */
+    word-wrap: break-word; /* For modern browsers */
+    white-space: normal; /* For older browsers */}
+
+   
+
+        body {
+            font-family: 'Calibri', 'sans-serif';
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            
+            margin: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /*form {
+            position: relative;
+            bottom: 0;
+            right: 0;
+        }*/
+
+        .transit-info {
+            margin: auto;
+            background-color: #ffffff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            margin-top: 10px;
+            max-width: 800px;
+        }
+
+        .step {
+            border-bottom: 1px solid #ccc;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+        }
+
+        .step h4 {
+            margin-top: 0;
+        }
+
+
+
+.sidebar img {
+    width: 100%; /* Adjust the width as needed */
+    height: 30%; /* Maintain aspect ratio */
+}
+
+.sidebar h2 {
+    font-size: 25px; /* Adjust the font size as needed */
+    font-family: Arial, sans-serif; /* Adjust the font family as needed */
+    position: absolute; /* Position the element absolutely */
+    top: 20px; /* Adjust the top position as needed */
+    left: 50%; /* Position horizontally in the center */
+    transform: translateX(-50%); /* Adjust to horizontally center the element */
+    z-index: 1; /* Ensure the h2 is above other content */
+}
+    </style>
+
+</head>
+
+    <script>
+        var map, directionsService, directionsRenderer;
+        var originLocation, destinationLocation;
+        var travelOptions;
+
+        function initMap() {
+            // Initialize map
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 11,
+                center: {
+                    lat: 1.3802409,lng: 103.7907347
+                }
+            });
+
+            // Initialize Directions Service and Renderer
+            directionsService = new google.maps.DirectionsService();
+            directionsRenderer = new google.maps.DirectionsRenderer();
+        }
+
+        function clearMarkings() {
+            directionsRenderer.setMap(null);
+            document.getElementById('origin').value = '';
+            document.getElementById('destination').value = '';
+            document.getElementById('transit-info').innerHTML = '';
+
+            clearCarparkMarkings();
+        }
+
+        function swapLocations(){    
+            //TO SWAP THE LOCATION     
+            var temp_name = document.getElementById('origin').value;
+            document.getElementById('origin').value = document.getElementById('destination').value;
+            document.getElementById('destination').value = temp_name;
+
+            //TO SWAP THE COORDINATES
+            var temp = originLocation;
+            originLocation = destinationLocation;
+            destinationLocation = temp;
+
+            //TO RESET THE MAP AND RESULTS
+            directionsRenderer.setMap(null);
+            document.getElementById('transit-info').innerHTML = "";
+            
+            calculateRoute(); //default display
+            checkCarparkAvailability(destinationLocation);
+
+        }
+
+        function GPSlocation() {
+            navigator.geolocation.getCurrentPosition(showLocation);
+        }
+
+        function showLocation(position) {
+            document.getElementById('origin').value = position.coords.latitude + "," + position.coords.longitude;
+        }
+
+        function mapmarking() {
+            var origin = document.getElementById('origin').value;
+            var destination = document.getElementById('destination').value;
+
+            getCoordinates(origin, true);
+            getCoordinates(destination, false);
+        }
+
+        function getCoordinates(location, isOrigin) {
+            var geocoder = new google.maps.Geocoder();
+
+            geocoder.geocode({
+                'address': location
+            }, function (results, status) {
+                if (status === 'OK') {
+                    if (isOrigin) {
+                        originLocation = results[0].geometry.location;
+                        // Extract latitude and longitude from the origin location
+                        var userLatitude = originLocation.lat();
+                        var userLongitude = originLocation.lng();
+                        // Call checkTaxiAvailability()
+                        var message = checkTaxiAvailability(userLatitude, userLongitude);
+                        updateTransitInfo(message)
+                    } else {
+                        destinationLocation = results[0].geometry.location;
+                        travelOptions = 0; //default is driving result 
+                        calculateRoute(); //default display
+                        checkCarparkAvailability(destinationLocation);
+                    }
+                } else {
+                    alert("Error: Invalid Entry, Please Key Again");
+                }
+            });
+        }
+
+        function calculateRoute() {
+            if(travelOptions == 0){
+                travelMode = 'DRIVING';
+            }
+            else if(travelOptions == 1){
+                travelMode = 'TRANSIT';
+            }
+            directionsService.route({
+                origin: originLocation,
+                destination: destinationLocation,
+                travelMode, // Set travel mode to transit
+                provideRouteAlternatives: true // Request multiple route alternatives
+            }, function (response, status) {
+                    if (status === 'OK') {                    
+                    var routes = response.routes;
+                    var transitInfo = document.getElementById('transit-info');
+                    transitInfo.innerHTML = '';
+                    var limit = routes.length;
+                    for (var i = 0; i < Math.min(routes.length, 3); i++) { 
+                        var route = routes[i];
+                        var distance = 0;
+                        var duration = 0;
+                        for (var j = 0; j < route.legs.length; j++) {
+                            distance += route.legs[j].distance.value;
+                            duration += route.legs[j].duration.value;
+                        }
+                        // Convert distance to kilometers and time to minutes
+                        distance = distance / 1000;
+                        duration = duration / 60;
+
+                        // Create a div for each route
+                        var routeDiv = document.createElement('div');
+                        routeDiv.classList.add('transit-info', 'route');
+
+                        // Populate the div with route information
+                        var header = document.createElement('div');
+                        header.innerHTML = "<h1>Route " + (i + 1) + "</h1><p>Distance: " 
+                            + distance.toFixed(2) + " km, Duration: " + duration.toFixed(0) + " mins</p>";
+                        if(travelOptions == 1){
+                            header.classList.add('step');
+                        }
+                        routeDiv.appendChild(header);
+
+                        // Iterate through transit steps
+                        for (var k = 0; k < route.legs[0].steps.length; k++) {
+                            var step = route.legs[0].steps[k];
+                            if (step.travel_mode === 'TRANSIT') {
+                                var transitDetails = step.transit;
+                                var stepDiv = document.createElement('div');
+                                if(k+2 != route.legs[0].steps.length){
+                                    stepDiv.classList.add('step');
+                                }
+                                    
+                                stepDiv.innerHTML = "<p>" + transitDetails.line.name + " (" + transitDetails.line.vehicle.type + ")</p><p>Departure: " 
+                                    + transitDetails.departure_stop.name + "</p><p>Arrival: " + transitDetails.arrival_stop.name + "</p>";
+                                routeDiv.appendChild(stepDiv);
+                            }
+                            
+                        }
+
+                        // Append the div to transitInfo
+                        transitInfo.appendChild(routeDiv);
+                    }
+                } else {
+                    window.alert('Request failed due to ' + status);
+                }
+            });
+        }
+
+        function DisplayRoute(selectedRouteIndex) {
+            if(travelOptions == 0){
+                travelMode = 'DRIVING';
+            }
+            else if(travelOptions == 1){
+                travelMode = 'TRANSIT';
+            }
+            else{
+                travelMode = 3;
+            }
+            directionsService.route({
+                origin: originLocation,
+                destination: destinationLocation,
+                travelMode, // Set travel mode to transit
+                provideRouteAlternatives: true // Request multiple route alternatives
+            }, function (response, status) {
+                    if (status === 'OK') {       
+                        if (selectedRouteIndex >= response.routes.length) {
+                            window.alert('Route Does Not Exist.');  
+                        } 
+                        else{
+                            directionsRenderer.setMap(null);
+                            directionsRenderer = new google.maps.DirectionsRenderer({
+                                map: map,
+                                directions: response,
+                                routeIndex: selectedRouteIndex
+                    });
+                        }          
+                } else {
+                    window.alert('Directions request failed due to ' + status);
+                }
+            });
+        }
+
+        function printDrivingInfo(){
+            travelOptions = 0; //switch travel mode
+            var selectedIndex = 0; //route value
+            calculateRoute();
+        }
+
+        function printTransitInfo(){
+            travelOptions = 1; //switch travel mode
+            var selectedIndex = 0; //route value
+            calculateRoute();
+        }
+        
+        // Function to check taxi availability
+        function checkTaxiAvailability(userLatitude, userLongitude) {
+            axios.get('http://datamall2.mytransport.sg/ltaodataservice/Taxi-Availability', {
+                headers: {
+                    'AccountKey': 'rUhz8DB8SoaSwhQ6B83UiQ=='
+                }
+            })
+            .then(function (response) {
+                const taxiData = response.data.value;
+                const taxiLocations = taxiData.map(taxi => ({ latitude: parseFloat(taxi.Latitude), longitude: parseFloat(taxi.Longitude) }));
+                const userLocation = { latitude: parseFloat(userLatitude), longitude: parseFloat(userLongitude) };
+                const numTaxisWithin3km = countTaxisWithin3km(userLocation, taxiLocations);
+
+                // Update the content of the div with id="transit-info"
+                document.getElementById('transit-info').innerHTML = `There are ${numTaxisWithin3km} available taxis within 3km of your location.`;
+            })
+            .catch(function (error) {
+                console.error('Failed to retrieve taxi availability data:', error);
+                // Update the content of the div with id="transit-info" in case of error
+                document.getElementById('transit-info').innerHTML = 'Failed to retrieve taxi availability data. Please try again later.';
+            });
+        }
+
+        // Function to count available taxis within 3km of user location
+        function countTaxisWithin3km(userLocation, taxiLocations) {
+            let count = 0;
+            taxiLocations.forEach(taxiLocation => {
+                let distance = haversineDistance(userLocation, taxiLocation);
+                if (distance <= 3) {
+                    count++;
+                }
+            });
+            return count;
+        }
+
+        // Function to calculate distance between two points using Haversine formula
+        function haversineDistance(point1, point2) {
+            const earthRadiusKm = 6371;
+
+            const lat1 = degreesToRadians(point1.latitude);
+            const lon1 = degreesToRadians(point1.longitude);
+            const lat2 = degreesToRadians(point2.latitude);
+            const lon2 = degreesToRadians(point2.longitude);
+
+            const dLat = lat2 - lat1;
+            const dLon = lon2 - lon1;
+
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                    Math.cos(lat1) * Math.cos(lat2) *
+                    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+            return earthRadiusKm * c;
+        }
+
+        // Function to convert degrees to radians
+        function degreesToRadians(degrees) {
+            return degrees * Math.PI / 180;
+        }
+
+        // Modify printTaxiInfo to call checkTaxiAvailability
+        function printTaxiInfo() {
+            var origin = document.getElementById('origin').value;
+            getCoordinates(origin, true);
+        }
+
+function printRouteOne() {
+    DisplayRoute(0); // Display the first route
+}
+
+function printRouteTwo() {
+    DisplayRoute(1); // Display the second route
+}
+
+function printRouteThree() {
+    DisplayRoute(2); // Display the third route
+}
+
+
+
+
+    </script>
+    <br>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAo6_fYG69jFPnIrR7elUBEgJzV7mN-Y0k&callback=initMap" async defer></script>
+    <div id="map"></div>
+	<div class="sidebar">
+	<h2>Transportation Application</h2>
+    <img src="C:\Users\cheny\Desktop\images\Trans.gif" alt="Transportation Application GIF">
+        <br>
+
+    <div class="input-Box">
+		<input type="text" id="origin" name="origin" style="width: 100%;" placeholder="Enter start point">
+        <br>
+	<input type="text" id="destination" name="destination" style="width: 100%; margin-top: 5px;" placeholder="Enter destination">
+        <br>
+		
+	<span id="swap-btn" onclick="swapLocations()" style="cursor: pointer;">&#8693;</span>
+
+	
+
+    </div>
+		
+     <div class="button-container">
+        <div class="rounded-box">
+            <input type="button" onclick="GPSlocation()" value="Current Location" style="width: calc(33.33% - 10px);">
+        </div>
+        <div class="rounded-box">
+            <input type="button" onclick="mapmarking()" value="Submit" style="width: calc(33.33% - 10px);">
+        </div>
+        <div class="rounded-box">
+            <input type="button" onclick="clearMarkings()" value="Clear Search" style="width: calc(33.33% - 10px);">
+        </div>
+		
+
+    </div>
+	
+	
+    <p>Your Search results</p>
+<div class="button-container">
+    <div class="rounded-box">
+        <input type="button" onclick="printDrivingInfo()" value="Driving Information" style="width: 100%;">
+    </div>
+    <div class="rounded-box">
+        <input type="button" onclick="printTransitInfo()" value="Transit Information" style="width: 100%;">
+    </div>
+    <div class="rounded-box">
+        <input type="button" onclick="printTaxiInfo()" value="Taxi Information" style="width: 100%;">
+    </div>
+</div>
+
+    <p>Your Preferred Route:</p>
+	
+<div class="button-container">
+    <div class="rounded-box">
+        <input type="button" onclick="printRouteOne()" value="Route 1" style="width: 100%;">
+    </div>
+    <div class="rounded-box">
+        <input type="button" onclick="printRouteTwo()" value="Route 2" style="width: 100%;">
+    </div>
+    <div class="rounded-box">
+        <input type="button" onclick="printRouteThree()" value="Route 3" style="width: 100%;">
+    </div>
+</div>
+	
+	<!-- Output sections for printDrivingInfo(), printTransitInfo(), and printTaxiInfo() -->
+<div id="driving-info"></div>
+<div id="transit-info"></div>
+<div id="taxi-info"></div>
+	
+	
+	
+</div>
+</body>
+
+<script>
+    /*document.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault(); // Prevent the default key behavior 
+            mapmarking(); 
+        }
+    });*/
+
+        // Function to check if both origin and destination are filled
+        function checkInputsFilled() {
+            var originValue = document.getElementById('origin').value.trim();
+            var destinationValue = document.getElementById('destination').value.trim();
+            return originValue !== '' && destinationValue !== '';
+        }
+
+        // Event listener for Enter key press on document level
+        document.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter' && checkInputsFilled()) {
+                e.preventDefault(); // Prevent the default key behavior 
+                mapmarking(); // Call the function to handle the action
+            }
+        });
+
+        // Function to enable/disable Submit button based on input status
+        function updateSubmitButton() {
+            var submitButton = document.getElementById('submitBtn');
+            submitButton.disabled = !checkInputsFilled();
+        }
+
+        // Event listener for input changes to update Submit button status
+        document.getElementById('origin').addEventListener('input', updateSubmitButton);
+        document.getElementById('destination').addEventListener('input', updateSubmitButton);
+</script>
+
+</html>

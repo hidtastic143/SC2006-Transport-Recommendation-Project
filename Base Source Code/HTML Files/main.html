@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Decide4Me</title>
+    <link rel="stylesheet" href="../CSS Files/menu.css"/>
+
+    <link rel="stylesheet" href="https://pyscript.net/alpha/pyscript.css" />
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <script defer src="https://pyscript.net/alpha/pyscript.js"></script>
+    <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBLsQViCvXeunoy4q3Ju66iYvOhodcnWi4&region=SG&callback=initMap" async defer></script>
+
+    <script src="../JavaScript Files/recommendation.js"></script>
+    
+    <!-- User input Javascript File -->
+    <script src="../JavaScript Files/menu.js"></script>
+
+    <!-- Google API Javascript File -->
+    <script src="../JavaScript Files/GoogleAPI.js"></script>
+
+    <!-- Taxi Availability Javascript File -->
+    <script src="../JavaScript Files/taxi.js"></script>
+
+    <!-- Carpark Availability Javascript Files -->
+    <script src="../JavaScript Files/carpark.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+</head>
+    <div id="map">
+        <script>
+            window.onload = function() { initMap(); }
+        </script>
+    </div>
+	<div class="sidebar">
+        <h1>Decide4Me</h1>
+        <img src="../Media Files/Trans.gif" alt="Decide4Me GIF">
+
+        <div class="input-Box">
+            <input type="text" id="origin" name="origin" style="width: 100%;" placeholder="Enter start point">
+            <br>
+            <input type="text" id="destination" name="destination" style="width: 100%; margin-top: 5px;" placeholder="Enter destination">
+            <br>
+            <span id="swap-btn" onclick="swapLocations()" style="cursor: pointer;">&#8693;</span>
+        </div>
+
+        <div class="rounded-box">
+            <input type="button" onclick="GPSlocation()" value="Current Location" style="width: calc(33.33% - 10px);">
+            <input type="button" onclick="mapMarking()" value="Submit" style="width: calc(33.33% - 10px);">
+            <input type="button" onclick="clearMarkings()" value="Clear Search" style="width: calc(33.33% - 10px);">
+        </div>
+
+
+        <div class="recommendation" id="recommendation">
+            <h2>We Recommend Taking..</h2>
+            <i class="material-icons" id="recommend-transport" style="font-size:30px;"></i><br>
+            <button class="button collapsible-recommendation"  id="collapsible-recommendation" onclick="displayReason()">Find Out Why!</button>
+
+            <div class="result" id="result"></div>
+        </div>
+        <br><br><br>
+        <div class="button-container">
+            <p>Your Search results</p>
+            <div class="rounded-box">
+                <input type="button" onclick="printDrivingInfo()" value="Driving Information" style="width: 100%;">
+            </div>
+            <div class="rounded-box">
+                <input type="button" onclick="printTransitInfo()" value="Transit Information" style="width: 100%;">
+            </div>
+            <div class="rounded-box">
+                <input type="button" onclick="printTaxiInfo()" value="Taxi Information" style="width: 100%;">
+            </div>
+        </div>
+        
+        <div class="button-container" >
+            <p>Your Preferred Route:</p>
+            <div class="rounded-box">
+                <input type="button" onclick="printRouteOne()" value="Route 1" style="width: 100%;">
+            </div>
+            <div class="rounded-box">
+                <input type="button" onclick="printRouteTwo()" value="Route 2" style="width: 100%;">
+            </div>
+            <div class="rounded-box">
+                <input type="button" onclick="printRouteThree()" value="Route 3" style="width: 100%;">
+            </div>
+        </div>
+        
+        <!-- Output sections for printing Routes -->
+        <div id="transit-info"></div>
+    </div>
+</body>
+
+</html>

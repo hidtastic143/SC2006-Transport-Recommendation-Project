@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <title>Transportation Application</title>
+
+    <link rel="stylesheet" href="https://pyscript.net/alpha/pyscript.css" />
+    
+    <script defer src="https://pyscript.net/alpha/pyscript.js"></script>
+
+    <!-- Taxi Availability Javascript Files-->
+    <script src="../Base Source Code/JavaScript Files/taxi.js"></script>
+
+    <!-- Carpark Availability Javascript files-->
+    <script src="../Base Source Code/JavaScript Files/carpark.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script> 
+    <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBLsQViCvXeunoy4q3Ju66iYvOhodcnWi4&callback=initMap" async defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <style>
+        #map {
+            margin: auto;
+            height: 400px;
+            width: 800px;
+        }
+
+        .rounded-box {
+            margin: auto;
+            background-color:#4a89ff;
+            border-radius: 10px;
+            padding: 20px;
+            width: 800px;
+            height: 150px;
+            box-shadow: 0px 0px 10px #888;
+        }
+
+        .rounded-box1 {
+            margin: auto;
+            background-color:#4a89ff;
+            border-radius: 10px;
+            padding: 20px;
+            width: 800px;
+            height: 60px;
+            box-shadow: 0px 0px 10px #888;
+        }
+
+        body {
+            font-family: 'Calibri', 'sans-serif';
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            
+            margin: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        form {
+            position: relative;
+            bottom: 0;
+            right: 0;
+        }
+
+        .transit-info {
+            margin: auto;
+            background-color: #ffffff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            margin-top: 10px;
+            max-width: 800px;
+        }
+
+        .step {
+            border-bottom: 1px solid #ccc;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+        }
+
+        .step h4 {
+            margin-top: 0;
+        }
+
+    </style>
+
+</head>
+
+    <script>
+        var map, directionsService, directionsRenderer;
+        var originLocation, destinationLocation;
+        var travelOptions;
+
+        function initMap() {
+            // Initialize map
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 11,
+                center: {
+                    lat: 1.3802409,lng: 103.7907347
+                }
+            });
+
+            // Initialize Directions Service and Renderer
+            directionsService = new google.maps.DirectionsService();
+            directionsRenderer = new google.maps.DirectionsRenderer();
+        }
+
+        function clearMarkings() {
+            directionsRenderer.setMap(null);
+            document.getElementById('origin').value = '';
+            document.getElementById('destination').value = '';
+            document.getElementById('transit-info').innerHTML = '';
+
+            clearCarparkMarkings();
+        }
+
+        function swapLocations(){    
+            //TO SWAP THE LOCATION     
+            var temp_name = document.getElementById('origin').value;
+            document.getElementById('origin').value = document.getElementById('destination').value;
+            document.getElementById('destination').value = temp_name;
+
+            //TO SWAP THE COORDINATES
+            var temp = originLocation;
+            originLocation = destinationLocation;
+            destinationLocation = temp;
+
+            //TO RESET THE MAP AND RESULTS
+            directionsRenderer.setMap(null);
+            document.getElementById('transit-info').innerHTML = "";
+            
+            calculateRoute(); //default display
+            checkCarparkAvailability(destinationLocation);
+
+        }
+
+        function GPSlocation() {
+            navigator.geolocation.getCurrentPosition(showLocation);
+        }
+
+        function showLocation(position) {
+            document.getElementById('origin').value = position.coords.latitude + "," + position.coords.longitude;
+        }
+
+        function mapmarking() {
+            var origin = document.getElementById('origin').value;
+            var destination = document.getElementById('destination').value;
+
+            getCoordinates(origin, true);
+            getCoordinates(destination, false);
+        }
+
+        function getCoordinates(location, isOrigin) {
+            var geocoder = new google.maps.Geocoder();
+
+            geocoder.geocode({
+                'address': location
+            }, function (results, status) {
+                if (status === 'OK') {
+                    if (isOrigin) {
+                        originLocation = results[0].geometry.location;
+                        // Extract latitude and longitude from the origin location
+                        var userLatitude = originLocation.lat();
+                        var userLongitude = originLocation.lng();
+                        // Call checkTaxiAvailability()
+                        var message = checkTaxiAvailability(userLatitude, userLongitude);
+                        updateTransitInfo(message)
+                    } else {
+                        destinationLocation = results[0].geometry.location;
+                        travelOptions = 0; //default is driving result 
+                        calculateRoute(); //default display
+                        checkCarparkAvailability(destinationLocation);
+                    }
+                } else {
+                    alert("Error: Invalid Entry, Please Key Again");
+                }
+            });
+        }
+
+        function calculateRoute() {
+            if(travelOptions == 0){
+                travelMode = 'DRIVING';
+            }
+            else if(travelOptions == 1){
+                travelMode = 'TRANSIT';
+            }
+            directionsService.route({
+                origin: originLocation,
+                destination: destinationLocation,
+                travelMode, // Set travel mode to transit
+                provideRouteAlternatives: true // Request multiple route alternatives
+            }, function (response, status) {
+                    if (status === 'OK') {                    
+                    var routes = response.routes;
+                    var transitInfo = document.getElementById('transit-info');
+                    transitInfo.innerHTML = '';
+                    var limit = routes.length;
+                    for (var i = 0; i < Math.min(routes.length, 3); i++) { 
+                        var route = routes[i];
+                        var distance = 0;
+                        var duration = 0;
+                        for (var j = 0; j < route.legs.length; j++) {
+                            distance += route.legs[j].distance.value;
+                            duration += route.legs[j].duration.value;
+                        }
+                        // Convert distance to kilometers and time to minutes
+                        distance = distance / 1000;
+                        duration = duration / 60;
+
+                        // Create a div for each route
+                        var routeDiv = document.createElement('div');
+                        routeDiv.classList.add('transit-info', 'route');
+
+                        // Populate the div with route information
+                        var header = document.createElement('div');
+                        header.innerHTML = "<h1>Route " + (i + 1) + "</h1><p>Distance: " 
+                            + distance.toFixed(2) + " km, Duration: " + duration.toFixed(0) + " mins</p>";
+                        if(travelOptions == 1){
+                            header.classList.add('step');
+                        }
+                        routeDiv.appendChild(header);
+
+                        // Iterate through transit steps
+                        for (var k = 0; k < route.legs[0].steps.length; k++) {
+                            var step = route.legs[0].steps[k];
+                            if (step.travel_mode === 'TRANSIT') {
+                                var transitDetails = step.transit;
+                                var stepDiv = document.createElement('div');
+                                if(k+2 != route.legs[0].steps.length){
+                                    stepDiv.classList.add('step');
+                                }
+                                    
+                                stepDiv.innerHTML = "<p>" + transitDetails.line.name + " (" + transitDetails.line.vehicle.type + ")</p><p>Departure: " 
+                                    + transitDetails.departure_stop.name + "</p><p>Arrival: " + transitDetails.arrival_stop.name + "</p>";
+                                routeDiv.appendChild(stepDiv);
+                            }
+                            
+                        }
+
+                        // Append the div to transitInfo
+                        transitInfo.appendChild(routeDiv);
+                    }
+                } else {
+                    window.alert('Request failed due to ' + status);
+                }
+            });
+        }
+
+        function DisplayRoute(selectedRouteIndex) {
+            if(travelOptions == 0){
+                travelMode = 'DRIVING';
+            }
+            else if(travelOptions == 1){
+                travelMode = 'TRANSIT';
+            }
+            else{
+                travelMode = 3;
+            }
+            directionsService.route({
+                origin: originLocation,
+                destination: destinationLocation,
+                travelMode, // Set travel mode to transit
+                provideRouteAlternatives: true // Request multiple route alternatives
+            }, function (response, status) {
+                    if (status === 'OK') {       
+                        if (selectedRouteIndex >= response.routes.length) {
+                            window.alert('Route Does Not Exist.');  
+                        } 
+                        else{
+                            directionsRenderer.setMap(null);
+                            directionsRenderer = new google.maps.DirectionsRenderer({
+                                map: map,
+                                directions: response,
+                                routeIndex: selectedRouteIndex
+                    });
+                        }          
+                } else {
+                    window.alert('Directions request failed due to ' + status);
+                }
+            });
+        }
+
+        function printDrivingInfo(){
+            travelOptions = 0; //switch travel mode
+            var selectedIndex = 0; //route value
+            calculateRoute();
+        }
+
+        function printTransitInfo(){
+            travelOptions = 1; //switch travel mode
+            var selectedIndex = 0; //route value
+            calculateRoute();
+        }
+        
+        // Function to check taxi availability
+        function checkTaxiAvailability(userLatitude, userLongitude) {
+            axios.get('http://datamall2.mytransport.sg/ltaodataservice/Taxi-Availability', {
+                headers: {
+                    'AccountKey': 'rUhz8DB8SoaSwhQ6B83UiQ=='
+                }
+            })
+            .then(function (response) {
+                const taxiData = response.data.value;
+                const taxiLocations = taxiData.map(taxi => ({ latitude: parseFloat(taxi.Latitude), longitude: parseFloat(taxi.Longitude) }));
+                const userLocation = { latitude: parseFloat(userLatitude), longitude: parseFloat(userLongitude) };
+                const numTaxisWithin3km = countTaxisWithin3km(userLocation, taxiLocations);
+
+                // Update the content of the div with id="transit-info"
+                document.getElementById('transit-info').innerHTML = `There are ${numTaxisWithin3km} available taxis within 3km of your location.`;
+            })
+            .catch(function (error) {
+                console.error('Failed to retrieve taxi availability data:', error);
+                // Update the content of the div with id="transit-info" in case of error
+                document.getElementById('transit-info').innerHTML = 'Failed to retrieve taxi availability data. Please try again later.';
+            });
+        }
+
+        // Function to count available taxis within 3km of user location
+        function countTaxisWithin3km(userLocation, taxiLocations) {
+            let count = 0;
+            taxiLocations.forEach(taxiLocation => {
+                let distance = haversineDistance(userLocation, taxiLocation);
+                if (distance <= 3) {
+                    count++;
+                }
+            });
+            return count;
+        }
+
+        // Function to calculate distance between two points using Haversine formula
+        function haversineDistance(point1, point2) {
+            const earthRadiusKm = 6371;
+
+            const lat1 = degreesToRadians(point1.latitude);
+            const lon1 = degreesToRadians(point1.longitude);
+            const lat2 = degreesToRadians(point2.latitude);
+            const lon2 = degreesToRadians(point2.longitude);
+
+            const dLat = lat2 - lat1;
+            const dLon = lon2 - lon1;
+
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                    Math.cos(lat1) * Math.cos(lat2) *
+                    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+            return earthRadiusKm * c;
+        }
+
+        // Function to convert degrees to radians
+        function degreesToRadians(degrees) {
+            return degrees * Math.PI / 180;
+        }
+
+        // Modify printTaxiInfo to call checkTaxiAvailability
+        function printTaxiInfo() {
+            var origin = document.getElementById('origin').value;
+            getCoordinates(origin, true);
+        }
+
+        function printRouteOne(){
+            var selectedIndex = 0; //route value
+            DisplayRoute(selectedIndex);
+        }
+
+        function printRouteTwo(){
+            var selectedIndex = 1; //route value
+            DisplayRoute(selectedIndex);
+        }
+
+        function printRouteThree(){
+            var selectedIndex = 2; //route value
+            DisplayRoute(selectedIndex);
+        }
+
+    </script>
+    <br>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAo6_fYG69jFPnIrR7elUBEgJzV7mN-Y0k&callback=initMap" async defer></script>
+    <div id="map"></div>
+    <p>Hello there, where are you heading to?</p>
+    <div class="rounded-box">
+        <form action="/action_page.php">
+            <label for="origin">Origin:&emsp;&emsp;&emsp;&emsp;</label>
+            <input type="text" id="origin" name="origin" style="width: 400px"><br><br>
+
+            <label for="destination">Destination: &ensp;&emsp;</label>
+            <input type="text" id="destination" name="destination" style="width: 400px"><br><br>
+
+            <input type="button" onclick="GPSlocation()" value="Use Current Location" style="width: 150px">
+            <input type="button" onclick="mapmarking()" value="Submit" style="width: 150px">
+            <input type="button" onclick="clearMarkings()" value="Clear Search" style="width: 150px">
+            <input type="button" onclick="swapLocations()" value="Swap Location" style="width: 150px">
+        </form>
+    </div>
+    <p>Your Search results</p>
+    <div class="rounded-box1">
+    <input type="button" onclick="printDrivingInfo()" value="Driving Information" style="width: 150px">
+    <input type="button" onclick="printTransitInfo()" value="Transit Information" style="width: 150px">
+    <input type="button" onclick="printTaxiInfo()" value="Taxi Information" style="width: 150px">
+    </div>
+    
+    <p>Your Preferred Route: </p>
+    <div class="rounded-box1">
+        <input type="button" onclick="printRouteOne()" value="Route 1" style="width: 150px">
+        <input type="button" onclick="printRouteTwo()" value="Route 2" style="width: 150px">
+        <input type="button" onclick="printRouteThree()" value="Route 3" style="width: 150px">
+    </div>
+    <div id="transit-info"></div>
+</body>
+
+<script>
+    /*document.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault(); // Prevent the default key behavior 
+            mapmarking(); 
+        }
+    });*/
+
+        // Function to check if both origin and destination are filled
+        function checkInputsFilled() {
+            var originValue = document.getElementById('origin').value.trim();
+            var destinationValue = document.getElementById('destination').value.trim();
+            return originValue !== '' && destinationValue !== '';
+        }
+
+        // Event listener for Enter key press on document level
+        document.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter' && checkInputsFilled()) {
+                e.preventDefault(); // Prevent the default key behavior 
+                mapmarking(); // Call the function to handle the action
+            }
+        });
+
+        // Function to enable/disable Submit button based on input status
+        function updateSubmitButton() {
+            var submitButton = document.getElementById('submitBtn');
+            submitButton.disabled = !checkInputsFilled();
+        }
+
+        // Event listener for input changes to update Submit button status
+        document.getElementById('origin').addEventListener('input', updateSubmitButton);
+        document.getElementById('destination').addEventListener('input', updateSubmitButton);
+</script>
+
+</html>
